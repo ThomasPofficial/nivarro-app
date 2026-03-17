@@ -132,11 +132,12 @@ All routes prefixed `/api`.
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | POST | `/api/contacts/request` | JWT | Send a contact request (with optional message) |
-| GET | `/api/contacts/requests` | JWT | List pending requests for the authenticated user |
+| GET | `/api/contacts/requests` | JWT | List pending incoming requests for the authenticated user |
+| DELETE | `/api/contacts/requests/:id` | JWT | Cancel a sent contact request (sender only) |
 | PATCH | `/api/contacts/requests/:id/accept` | JWT | Accept a contact request; creates a thread |
 | PATCH | `/api/contacts/requests/:id/reject` | JWT | Reject a contact request |
 | GET | `/api/threads` | JWT | List all threads for the authenticated user |
-| GET | `/api/threads/:thread_id/messages` | JWT | Paginated message history (`?before=<ISO timestamp>&limit=30`) |
+| GET | `/api/threads/:thread_id/messages` | JWT | Paginated message history (`?before=<ISO timestamp>&limit=30`; default limit 30, max 100; omitting `before` returns most recent messages) |
 
 ### Accept Contact Request Flow
 When a request is accepted:
@@ -167,14 +168,19 @@ socket.join(socket.user._id)    // Personal room for unread updates
 
 ### Server → Client Events
 
-| Event | Payload | Trigger |
-|-------|---------|---------|
-| `message_received` | `{ message }` | New message in thread |
-| `thread_updated` | `{ thread_id, last_message, unread_count }` | Thread metadata changed |
-| `unread_update` | `{ thread_id, unread_count }` | Unread count changed for user |
-| `user_typing` | `{ thread_id, user_id, name }` | Someone is typing |
-| `user_stopped_typing` | `{ thread_id, user_id }` | Typing stopped |
-| `error` | `{ code, message }` | Validation or delivery failure |
+| Event | Payload | Target Room | Trigger |
+|-------|---------|-------------|---------|
+| `message_received` | `{ message }` | Thread room | New message in thread |
+| `thread_updated` | `{ thread_id, last_message, participant }` | User personal room | Thread created or metadata changed; includes full participant profile (`user_id`, `name`, `initials`, `photo_url`) so the frontend can render without a follow-up fetch |
+| `unread_update` | `{ thread_id, unread_count }` | User personal room | Unread count changed for a specific user; sent only to non-sender personal room |
+| `user_typing` | `{ thread_id, user_id, name }` | Thread room | Someone is typing |
+| `user_stopped_typing` | `{ thread_id, user_id }` | Thread room | Typing stopped |
+| `error` | `{ code, message }` | Emitting socket | Validation or delivery failure |
+
+**Event routing rules:**
+- `thread_updated` fires on the **user's personal room** only — used by `ThreadList` to update thread previews. Never broadcast to the thread room.
+- `unread_update` fires on the **non-sender's personal room** only — used for unread badges. Never broadcast to the thread room.
+- `message_received`, `user_typing`, `user_stopped_typing` fire on the **thread room** only — visible only to participants currently in the room.
 
 ### Typing Indicator Auto-Clear
 Server tracks a `typingTimers` map keyed by `thread_id:user_id`. Each `typing_start` resets the timer to 5 seconds. If no `typing_stop` arrives in 5 seconds, server emits `user_stopped_typing` automatically.
@@ -187,6 +193,7 @@ Server tracks a `typingTimers` map keyed by `thread_id:user_id`. Each `typing_st
 - `sendRequest(senderId, recipientId, message)` — create ContactRequest, reject if duplicate exists
 - `acceptRequest(requestId, userId)` — accept, create thread via ThreadService, return thread
 - `rejectRequest(requestId, userId)` — reject, return updated request
+- `cancelRequest(requestId, userId)` — delete request if status is still `pending` and userId matches sender_id; return 403 otherwise
 - `getPendingRequests(userId)` — return all pending requests where recipient = userId
 
 ### ThreadService
@@ -195,9 +202,9 @@ Server tracks a `typingTimers` map keyed by `thread_id:user_id`. Each `typing_st
 - `getThread(threadId, userId)` — return single thread, verify userId is a participant
 
 ### MessageService
-- `sendMessage(threadId, senderId, content)` — validate, store Message, update Thread.last_message, increment unread counts for other participants
-- `getHistory(threadId, userId, beforeTimestamp, limit)` — paginated fetch, verify participant
-- `markRead(threadId, userId)` — set unread_counts[userId] = 0, update read_by on messages
+- `sendMessage(threadId, senderId, content)` — independently verify senderId is a participant in the thread (do not rely on room membership alone), validate content, store Message, update Thread.last_message, increment unread counts for all other participants atomically
+- `getHistory(threadId, userId, beforeTimestamp, limit)` — paginated fetch (default limit 30, max 100, most recent if `beforeTimestamp` omitted), verify participant
+- `markRead(threadId, userId)` — atomically: set `unread_counts[userId] = 0` on Thread AND bulk-add userId to `read_by` on all messages in the thread where userId is not already in `read_by`
 
 ---
 
@@ -205,13 +212,14 @@ Server tracks a `typingTimers` map keyed by `thread_id:user_id`. Each `typing_st
 
 | Rule | Behavior |
 |------|----------|
-| Sender must be thread participant | Emit `error` event, do not store |
-| Content must be non-empty | Emit `error` event |
-| Content max 2000 chars | Emit `error` event |
-| Thread must exist on `join_thread` | Emit `error` event |
+| Sender must be thread participant (checked on every `send_message`) | Emit `error` `NOT_PARTICIPANT`, do not store |
+| Content must be non-empty | Emit `error` `CONTENT_EMPTY` |
+| Content max 2000 chars | Emit `error` `CONTENT_TOO_LONG` |
+| Thread must exist on `join_thread` | Emit `error` `THREAD_NOT_FOUND` |
 | No duplicate contact requests | Return 409 from REST endpoint |
 | History only for participants | Return 403 from REST endpoint |
-| No messaging without accepted contact | ContactRequest status must be `accepted` before thread creation |
+| No messaging without accepted contact | `MessageService.sendMessage` verifies the underlying ContactRequest has `status = 'accepted'` before storing; returns `NOT_PARTICIPANT` error if not |
+| Cancel only by sender, only while pending | Return 403 if userId ≠ sender_id or status ≠ 'pending' |
 
 ---
 
@@ -226,7 +234,7 @@ Server tracks a `typingTimers` map keyed by `thread_id:user_id`. Each `typing_st
 - Joins thread room on open (`join_thread`), leaves on close/unmount (`leave_thread`)
 - Fetches initial history via `/api/threads/:id/messages`
 - Listens for `message_received` to append new messages
-- Emits `typing_start` / `typing_stop` on input focus/blur with debounce
+- Emits `typing_start` on keystroke activity (debounced 300ms); emits `typing_stop` when input is cleared or user stops typing (no keystroke for 2 seconds)
 - Emits `mark_read` when window is focused and thread is active
 
 ### ContactRequestBanner
@@ -258,7 +266,6 @@ Server tracks a `typingTimers` map keyed by `thread_id:user_id`. Each `typing_st
 - `jsonwebtoken` — JWT verification
 - `dotenv` — environment config
 - `cors` — cross-origin for dev
-- `uuid` — not needed (Mongoose uses ObjectId)
 
 ### Client
 - `react`, `react-dom`
