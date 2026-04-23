@@ -25,4 +25,19 @@ async function getThread(threadId, userId) {
   return thread;
 }
 
-module.exports = { createThread, getThreadsForUser, getThread };
+async function createGroupThread(creatorId, name, memberIds) {
+  if (!name || !name.trim()) throw appError('VALIDATION_ERROR', 'Team name is required');
+  if (!memberIds || memberIds.length === 0) throw appError('VALIDATION_ERROR', 'At least one member is required');
+
+  const allIds = [creatorId.toString(), ...memberIds.map(String)];
+  const unread_counts = new Map(allIds.map(id => [id, 0]));
+
+  return Thread.create({
+    type: 'group',
+    name: name.trim(),
+    participants: allIds,
+    unread_counts,
+  });
+}
+
+module.exports = { createThread, createGroupThread, getThreadsForUser, getThread };

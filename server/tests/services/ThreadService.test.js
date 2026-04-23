@@ -58,3 +58,32 @@ describe('getThread', () => {
     await expect(ThreadService.getThread(thread._id, carol._id)).rejects.toMatchObject({ code: 'NOT_PARTICIPANT' });
   });
 });
+
+describe('ThreadService.createGroupThread', () => {
+  it('creates a group thread with correct type, name, participants, and unread_counts', async () => {
+    const [u1, u2, u3] = await Promise.all([
+      User.create({ name: 'U1', email: 'u1grp@test.com' }),
+      User.create({ name: 'U2', email: 'u2grp@test.com' }),
+      User.create({ name: 'U3', email: 'u3grp@test.com' }),
+    ]);
+    const thread = await ThreadService.createGroupThread(u1._id, 'My Team', [u2._id, u3._id]);
+    expect(thread.type).toBe('group');
+    expect(thread.name).toBe('My Team');
+    expect(thread.participants).toHaveLength(3);
+    expect(thread.unread_counts.get(u1._id.toString())).toBe(0);
+    expect(thread.unread_counts.get(u2._id.toString())).toBe(0);
+    expect(thread.unread_counts.get(u3._id.toString())).toBe(0);
+  });
+
+  it('throws VALIDATION_ERROR if name is empty', async () => {
+    const u = await User.create({ name: 'U', email: 'uval@test.com' });
+    await expect(ThreadService.createGroupThread(u._id, '', [u._id]))
+      .rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
+  it('throws VALIDATION_ERROR if memberIds is empty', async () => {
+    const u = await User.create({ name: 'U', email: 'uvalmem@test.com' });
+    await expect(ThreadService.createGroupThread(u._id, 'Team', []))
+      .rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+});
