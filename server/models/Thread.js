@@ -2,17 +2,15 @@ const mongoose = require('mongoose');
 
 const threadSchema = new mongoose.Schema(
   {
+    type: { type: String, enum: ['dm', 'group'], default: 'dm' },
+    name: { type: String, default: null },
     participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     last_message: {
-      sender_id: mongoose.Schema.Types.ObjectId,
+      sender_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       content: String,
       timestamp: Date,
     },
-    unread_counts: {
-      type: Map,
-      of: Number,
-      default: {},
-    },
+    unread_counts: { type: Map, of: Number, default: {} },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: false } }
 );
@@ -20,4 +18,3 @@ const threadSchema = new mongoose.Schema(
 threadSchema.index({ participants: 1 });
 
 module.exports = mongoose.model('Thread', threadSchema);
-// Note: updatedAt is suppressed via `updatedAt: false` to keep the schema clean
