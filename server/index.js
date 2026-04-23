@@ -10,12 +10,14 @@ const contactRoutes = require('./routes/contacts');
 const threadRoutes = require('./routes/threads');
 const usersRoutes = require('./routes/users');
 const registerHandlers = require('./socket/handlers');
+const { setIo } = require('./socket/instance');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: process.env.CLIENT_URL, methods: ['GET', 'POST'] },
 });
+setIo(io);
 
 app.use(cors({ origin: process.env.CLIENT_URL }));
 app.use(express.json());
