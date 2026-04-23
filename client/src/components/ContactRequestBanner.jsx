@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import api, { setAuthToken } from '../api';
+import api from '../api';
 
 export default function ContactRequestBanner({ token }) {
   const [requests, setRequests] = useState([]);
 
   useEffect(() => {
     if (!token) return;
-    setAuthToken(token);
     api.get('/contacts/requests').then(res => setRequests(res.data)).catch(console.error);
   }, [token]);
 

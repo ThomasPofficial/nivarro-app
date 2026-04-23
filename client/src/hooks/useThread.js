@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import api, { setAuthToken } from '../api';
+import api from '../api';
 import { connectSocket, getSocket } from '../socket';
 
 export function useThread(token, userId) {
@@ -7,7 +7,6 @@ export function useThread(token, userId) {
 
   useEffect(() => {
     if (!token) return;
-    setAuthToken(token);
     connectSocket(token);
 
     api.get('/threads').then(res => setThreads(res.data)).catch(console.error);
