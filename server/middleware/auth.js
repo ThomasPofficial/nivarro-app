@@ -12,8 +12,9 @@ function requireAuth(req, res, next) {
   try {
     req.user = verifyToken(header.slice(7));
     next();
-  } catch {
-    res.status(401).json({ code: 'AUTH_FAILED', message: 'Invalid token' });
+  } catch (err) {
+    const code = err.name === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'AUTH_FAILED';
+    res.status(401).json({ code, message: err.message });
   }
 }
 
