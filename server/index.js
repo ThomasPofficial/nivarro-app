@@ -8,6 +8,7 @@ const { requireAuth, socketAuth } = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
 const contactRoutes = require('./routes/contacts');
 const threadRoutes = require('./routes/threads');
+const usersRoutes = require('./routes/users');
 const registerHandlers = require('./socket/handlers');
 
 const app = express();
@@ -22,6 +23,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/contacts', requireAuth, contactRoutes);
 app.use('/api/threads', requireAuth, threadRoutes);
+app.use('/api/users', requireAuth, usersRoutes);
 
 io.use(socketAuth);
 io.on('connection', (socket) => {
