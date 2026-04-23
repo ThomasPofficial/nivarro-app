@@ -92,3 +92,51 @@ describe('PATCH /api/contacts/requests/:id/reject', () => {
     expect(res.body.status).toBe('rejected');
   });
 });
+
+describe('GET /api/contacts', () => {
+  it('returns accepted contacts for the sender', async () => {
+    const { body: req } = await request(app)
+      .post('/api/contacts/request')
+      .set('Authorization', `Bearer ${token(alice._id)}`)
+      .send({ recipient_id: bob._id });
+    await request(app)
+      .patch(`/api/contacts/requests/${req._id}/accept`)
+      .set('Authorization', `Bearer ${token(bob._id)}`);
+
+    const res = await request(app)
+      .get('/api/contacts')
+      .set('Authorization', `Bearer ${token(alice._id)}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].name).toBe('Bob');
+    expect(res.body[0].password_hash).toBeUndefined();
+  });
+
+  it('returns accepted contacts for the recipient', async () => {
+    const { body: req } = await request(app)
+      .post('/api/contacts/request')
+      .set('Authorization', `Bearer ${token(alice._id)}`)
+      .send({ recipient_id: bob._id });
+    await request(app)
+      .patch(`/api/contacts/requests/${req._id}/accept`)
+      .set('Authorization', `Bearer ${token(bob._id)}`);
+
+    const res = await request(app)
+      .get('/api/contacts')
+      .set('Authorization', `Bearer ${token(bob._id)}`);
+    expect(res.body[0].name).toBe('Alice');
+  });
+
+  it('returns empty array when no accepted contacts', async () => {
+    const res = await request(app)
+      .get('/api/contacts')
+      .set('Authorization', `Bearer ${token(alice._id)}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(0);
+  });
+
+  it('returns 401 without token', async () => {
+    const res = await request(app).get('/api/contacts');
+    expect(res.status).toBe(401);
+  });
+});

@@ -51,4 +51,26 @@ router.delete('/requests/:id', async (req, res) => {
   }
 });
 
+router.get('/', async (req, res) => {
+  try {
+    const ContactRequest = require('../models/ContactRequest');
+    const User = require('../models/User');
+    const userId = req.user.id;
+
+    const accepted = await ContactRequest.find({
+      status: 'accepted',
+      $or: [{ sender_id: userId }, { recipient_id: userId }],
+    });
+
+    const contactIds = accepted.map(r =>
+      r.sender_id.toString() === userId ? r.recipient_id : r.sender_id
+    );
+
+    const contacts = await User.find({ _id: { $in: contactIds } }).select('name photo_url');
+    res.json(contacts);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;
