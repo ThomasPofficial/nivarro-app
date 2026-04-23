@@ -5,6 +5,7 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const { requireAuth, socketAuth } = require('./middleware/auth');
+const authRoutes = require('./routes/auth');
 const contactRoutes = require('./routes/contacts');
 const threadRoutes = require('./routes/threads');
 const registerHandlers = require('./socket/handlers');
@@ -18,6 +19,7 @@ const io = new Server(server, {
 app.use(cors({ origin: process.env.CLIENT_URL }));
 app.use(express.json());
 
+app.use('/api/auth', authRoutes);
 app.use('/api/contacts', requireAuth, contactRoutes);
 app.use('/api/threads', requireAuth, threadRoutes);
 
