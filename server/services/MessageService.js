@@ -14,14 +14,16 @@ async function sendMessage(threadId, senderId, content) {
     throw appError('NOT_PARTICIPANT', 'You are not a participant in this thread');
   }
 
-  const [p1, p2] = thread.participants.map(String);
-  const accepted = await ContactRequest.findOne({
-    $or: [
-      { sender_id: p1, recipient_id: p2, status: 'accepted' },
-      { sender_id: p2, recipient_id: p1, status: 'accepted' },
-    ],
-  });
-  if (!accepted) throw appError('NOT_PARTICIPANT', 'Contact request not accepted');
+  if (thread.type !== 'group') {
+    const [p1, p2] = thread.participants.map(String);
+    const accepted = await ContactRequest.findOne({
+      $or: [
+        { sender_id: p1, recipient_id: p2, status: 'accepted' },
+        { sender_id: p2, recipient_id: p1, status: 'accepted' },
+      ],
+    });
+    if (!accepted) throw appError('NOT_PARTICIPANT', 'Contact request not accepted');
+  }
 
   if (!content || !content.trim()) throw appError('CONTENT_EMPTY', 'Message content is empty');
   if (content.length > 2000) throw appError('CONTENT_TOO_LONG', 'Message exceeds 2000 characters');
@@ -34,15 +36,14 @@ async function sendMessage(threadId, senderId, content) {
     read_by: [senderId],
   });
 
-  const update = { last_message: { sender_id: senderId, content: content.trim(), timestamp: msg.timestamp } };
-  for (const participantId of thread.participants) {
-    if (participantId.toString() !== senderId.toString()) {
-      const key = `unread_counts.${participantId.toString()}`;
-      await Thread.findByIdAndUpdate(threadId, { $set: update, $inc: { [key]: 1 } });
-      return msg;
-    }
-  }
-  await Thread.findByIdAndUpdate(threadId, { $set: update });
+  const others = thread.participants.map(String).filter(id => id !== senderId.toString());
+  await Promise.all(others.map(id =>
+    Thread.findByIdAndUpdate(threadId, { $inc: { [`unread_counts.${id}`]: 1 } })
+  ));
+  await Thread.findByIdAndUpdate(threadId, {
+    $set: { last_message: { sender_id: senderId, content: content.trim(), timestamp: msg.timestamp } },
+  });
+
   return msg;
 }
 

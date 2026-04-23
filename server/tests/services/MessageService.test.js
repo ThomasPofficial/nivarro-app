@@ -100,3 +100,25 @@ describe('markRead', () => {
     }
   });
 });
+
+describe('sendMessage — group threads', () => {
+  it('delivers to all participants and increments unread for all non-senders', async () => {
+    const [u1, u2, u3] = await Promise.all([
+      User.create({ name: 'U1', email: 'u1g@test.com' }),
+      User.create({ name: 'U2', email: 'u2g@test.com' }),
+      User.create({ name: 'U3', email: 'u3g@test.com' }),
+    ]);
+    const thread = await Thread.create({
+      type: 'group',
+      name: 'Team',
+      participants: [u1._id, u2._id, u3._id],
+      unread_counts: new Map([[u1._id.toString(), 0], [u2._id.toString(), 0], [u3._id.toString(), 0]]),
+    });
+    const msg = await MessageService.sendMessage(thread._id, u1._id, 'hello group');
+    expect(msg.content).toBe('hello group');
+    const updated = await Thread.findById(thread._id);
+    expect(updated.unread_counts.get(u2._id.toString())).toBe(1);
+    expect(updated.unread_counts.get(u3._id.toString())).toBe(1);
+    expect(updated.unread_counts.get(u1._id.toString())).toBe(0);
+  });
+});
