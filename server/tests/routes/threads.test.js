@@ -72,3 +72,43 @@ describe('GET /api/threads/:id/messages', () => {
     expect(res.body.messages[0].content).toBe('Old');
   });
 });
+
+describe('POST /api/threads/group', () => {
+  it('creates a group thread for confirmed contacts', async () => {
+    const res = await request(app)
+      .post('/api/threads/group')
+      .set('Authorization', `Bearer ${token(alice._id)}`)
+      .send({ name: 'My Team', member_ids: [bob._id.toString()] });
+    expect(res.status).toBe(201);
+    expect(res.body.type).toBe('group');
+    expect(res.body.name).toBe('My Team');
+  });
+
+  it('returns 400 if name is missing', async () => {
+    const res = await request(app)
+      .post('/api/threads/group')
+      .set('Authorization', `Bearer ${token(alice._id)}`)
+      .send({ member_ids: [bob._id.toString()] });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('returns 400 if member_ids is empty', async () => {
+    const res = await request(app)
+      .post('/api/threads/group')
+      .set('Authorization', `Bearer ${token(alice._id)}`)
+      .send({ name: 'Team', member_ids: [] });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('returns 403 if a member is not a confirmed contact', async () => {
+    const carol = await User.create({ name: 'Carol', email: 'carol@test.com' });
+    const res = await request(app)
+      .post('/api/threads/group')
+      .set('Authorization', `Bearer ${token(alice._id)}`)
+      .send({ name: 'Team', member_ids: [carol._id.toString()] });
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('FORBIDDEN');
+  });
+});
