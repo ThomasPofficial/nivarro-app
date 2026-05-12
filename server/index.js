@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const connectDB = require('./config/db');
@@ -26,6 +27,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/contacts', requireAuth, contactRoutes);
 app.use('/api/threads', requireAuth, threadRoutes);
 app.use('/api/users', requireAuth, usersRoutes);
+
+const clientDist = path.join(__dirname, '../client/dist');
+app.use(express.static(clientDist));
+app.get('*', (req, res) => res.sendFile(path.join(clientDist, 'index.html')));
 
 io.use(socketAuth);
 io.on('connection', (socket) => {
