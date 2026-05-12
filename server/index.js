@@ -36,9 +36,14 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 5000;
 
 if (require.main === module) {
-  connectDB().then(() => {
-    server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-  });
+  connectDB()
+    .then(() => {
+      server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    })
+    .catch(err => {
+      console.error('Failed to start server:', err.message);
+      process.exit(1);
+    });
 }
 
 module.exports = { app, server, io };
