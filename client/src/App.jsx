@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { getStoredUser } from './hooks/useAuth';
 import { useThread } from './hooks/useThread';
+import api from './api';
 import AuthPage from './pages/AuthPage';
 import ProfileSetupPage from './pages/ProfileSetupPage';
 import ThreadList from './components/ThreadList';
@@ -18,8 +19,22 @@ function AppMain({ user, token }) {
   const [activePanel, setActivePanel] = useState('messages');
   const [activeThread, setActiveThread] = useState(null);
 
-  function openThread(thread) {
-    setActiveThread(thread);
+  async function openThread(threadOrUser) {
+    // SearchPanel passes a user object for connected users; resolve it to a real thread
+    if (threadOrUser && !threadOrUser.participants) {
+      try {
+        const { data: threads } = await api.get('/threads');
+        const match = threads.find(t =>
+          t.participants?.some(p => (p._id || p).toString() === threadOrUser._id.toString())
+        );
+        if (match) {
+          setActiveThread(match);
+          setActivePanel('messages');
+          return;
+        }
+      } catch { /* fall through to set whatever we have */ }
+    }
+    setActiveThread(threadOrUser);
     setActivePanel('messages');
   }
 
@@ -28,7 +43,7 @@ function AppMain({ user, token }) {
       <IconRail active={activePanel} onSelect={setActivePanel} />
 
       {activePanel === 'messages' && (
-        <ThreadList token={token} userId={user._id} onSelect={setActiveThread} />
+        <ThreadList token={token} userId={user._id} onSelect={setActiveThread} onCompose={() => setActivePanel('search')} />
       )}
       {activePanel === 'search' && (
         <SearchPanel onOpenThread={openThread} />
@@ -38,7 +53,7 @@ function AppMain({ user, token }) {
       )}
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', background: 'var(--bg-secondary)' }}>
+        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', background: 'var(--bg-secondary)', height: 52, boxSizing: 'border-box', flexShrink: 0 }}>
           <Greeting />
         </div>
         <ContactRequestBanner token={token} />

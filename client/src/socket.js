@@ -12,7 +12,7 @@ export function connectSocket(token) {
     socket.connect();
     return socket;
   }
-  const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const serverUrl = import.meta.env.VITE_API_URL || '';
   socket = io(serverUrl, {
     auth: { token },
     autoConnect: true,
