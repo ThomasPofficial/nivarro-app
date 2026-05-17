@@ -43,7 +43,7 @@ function AppMain({ user, token }) {
       <IconRail active={activePanel} onSelect={setActivePanel} />
 
       {activePanel === 'messages' && (
-        <ThreadList token={token} userId={user._id} onSelect={setActiveThread} onCompose={() => setActivePanel('search')} />
+        <ThreadList token={token} userId={user._id} onSelect={setActiveThread} selectedThreadId={activeThread?._id} onCompose={() => setActivePanel('search')} />
       )}
       {activePanel === 'search' && (
         <SearchPanel onOpenThread={openThread} />
@@ -53,7 +53,7 @@ function AppMain({ user, token }) {
       )}
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', background: 'var(--bg-secondary)', height: 52, boxSizing: 'border-box', flexShrink: 0 }}>
+        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', background: 'var(--bg-primary)', height: 52, boxSizing: 'border-box', flexShrink: 0 }}>
           <Greeting />
         </div>
         <ContactRequestBanner token={token} />

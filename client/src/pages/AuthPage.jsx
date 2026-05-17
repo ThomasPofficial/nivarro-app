@@ -2,19 +2,60 @@ import React, { useState } from 'react';
 import { login, register } from '../hooks/useAuth';
 
 const s = {
-  page: { minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  card: { background: 'var(--bg-secondary)', borderRadius: 12, padding: '36px 32px', width: 360, boxShadow: '0 8px 32px rgba(0,0,0,0.4)' },
-  logo: { fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4, textAlign: 'center' },
-  sub: { fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 28 },
-  label: { display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 },
-  input: { width: '100%', boxSizing: 'border-box', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 6, padding: '9px 12px', color: 'var(--text-primary)', fontSize: 14, marginBottom: 14, outline: 'none' },
-  btn: { width: '100%', padding: '10px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer', marginTop: 4 },
-  toggle: { textAlign: 'center', marginTop: 16, fontSize: 13, color: 'var(--text-secondary)' },
-  toggleLink: { color: 'var(--accent)', cursor: 'pointer', background: 'none', border: 'none', fontSize: 13 },
-  error: { color: '#f87171', fontSize: 13, marginBottom: 12 },
+  page: {
+    minHeight: '100vh', background: 'var(--bg-primary)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontFamily: "'Plus Jakarta Sans', sans-serif",
+  },
+  card: {
+    background: 'var(--bg-secondary)', borderRadius: 14,
+    padding: '40px 36px', width: 380,
+    boxShadow: '0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px var(--border)',
+  },
+  logo: {
+    fontFamily: "'Cormorant Garamond', serif",
+    fontSize: 32, fontWeight: 500, letterSpacing: '-0.5px',
+    color: '#f0f8ff', marginBottom: 4, textAlign: 'center',
+  },
+  sub: { fontSize: 13, fontWeight: 500, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 30 },
+  label: { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 5, letterSpacing: '0.3px' },
+  input: {
+    width: '100%', boxSizing: 'border-box',
+    background: 'var(--bg-mid)', border: '1px solid var(--border)',
+    borderRadius: 8, padding: '11px 14px',
+    color: 'var(--text-primary)', fontSize: 14, fontWeight: 500,
+    marginBottom: 14, outline: 'none',
+    fontFamily: "'Plus Jakarta Sans', sans-serif",
+  },
+  btn: {
+    width: '100%', padding: '12px',
+    background: 'linear-gradient(135deg, #0a3ea0, #1060d8)',
+    color: '#fff', border: 'none', borderRadius: 10,
+    fontSize: 14, fontWeight: 700, cursor: 'pointer', marginTop: 6,
+    boxShadow: '0 4px 20px rgba(16,96,216,0.45)',
+    fontFamily: "'Plus Jakarta Sans', sans-serif",
+  },
+  toggle: { textAlign: 'center', marginTop: 18, fontSize: 13, fontWeight: 500, color: 'var(--text-muted)' },
+  toggleLink: {
+    color: 'var(--accent-hi)', cursor: 'pointer',
+    background: 'none', border: 'none', fontSize: 13, fontWeight: 600,
+    fontFamily: "'Plus Jakarta Sans', sans-serif",
+  },
+  error: { color: '#f87171', fontSize: 13, fontWeight: 500, marginBottom: 12 },
   pwWrap: { position: 'relative', marginBottom: 14 },
-  pwInput: { width: '100%', boxSizing: 'border-box', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 6, padding: '9px 40px 9px 12px', color: 'var(--text-primary)', fontSize: 14, outline: 'none' },
-  showBtn: { position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12 },
+  pwInput: {
+    width: '100%', boxSizing: 'border-box',
+    background: 'var(--bg-mid)', border: '1px solid var(--border)',
+    borderRadius: 8, padding: '11px 44px 11px 14px',
+    color: 'var(--text-primary)', fontSize: 14, fontWeight: 500,
+    outline: 'none', fontFamily: "'Plus Jakarta Sans', sans-serif",
+  },
+  showBtn: {
+    position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+    background: 'none', border: 'none', color: 'var(--text-muted)',
+    cursor: 'pointer', fontSize: 12, fontWeight: 600,
+    fontFamily: "'Plus Jakarta Sans', sans-serif",
+  },
 };
 
 function PasswordInput({ value, onChange, placeholder }) {
@@ -62,17 +103,17 @@ export default function AuthPage({ onAuth }) {
         <form onSubmit={handleSubmit}>
           {mode === 'register' && (
             <>
-              <label style={s.label}>Name</label>
+              <label style={s.label}>NAME</label>
               <input style={s.input} type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Your name" required />
             </>
           )}
-          <label style={s.label}>Email</label>
+          <label style={s.label}>EMAIL</label>
           <input style={s.input} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" required />
-          <label style={s.label}>Password</label>
+          <label style={s.label}>PASSWORD</label>
           <PasswordInput value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" />
           {mode === 'register' && (
             <>
-              <label style={s.label}>Confirm password</label>
+              <label style={s.label}>CONFIRM PASSWORD</label>
               <PasswordInput value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Confirm password" />
             </>
           )}
